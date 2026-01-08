@@ -175,8 +175,8 @@ vim.keymap.set('n', '<Esc>', '<cmd>nohlsearch<CR>')
 
 -- Diagnostic keymaps
 vim.keymap.set('n', '<leader>q', vim.diagnostic.setloclist, { desc = 'Open diagnostic [Q]uickfix list' })
-vim.keymap.set('n', '<leader>zo', vim.diagnostic.open_float, { desc = '[Z]ero [O]pen diagnostic for current line' })
-vim.keymap.set("n", "<leader>zy", function()
+vim.keymap.set('n', '<leader>po', vim.diagnostic.open_float, { desc = '[P]roblems [O]pen diagnostic for current line' })
+vim.keymap.set("n", "<leader>py", function()
   local line = vim.api.nvim_win_get_cursor(0)[1]
   local diagnostics = vim.diagnostic.get(0, { lnum = line - 1 })
   if vim.tbl_isempty(diagnostics) then
@@ -197,6 +197,26 @@ vim.keymap.set("n", "<leader>zy", function()
 
   vim.notify((("Diagnostics from line %s copied to clipboard."):format(line)), vim.log.levels.INFO)
 end, { desc = "Copy current line diagnostics" })
+vim.keymap.set("n", "<leader>pg", function()
+  local line = vim.api.nvim_win_get_cursor(0)[1]
+  local diagnostics = vim.diagnostic.get(0, { lnum = line - 1 })
+  if vim.tbl_isempty(diagnostics) then
+    vim.notify(("No diagnostics on line %s"):format(line), vim.log.levels.ERROR)
+    return
+  end
+
+  local message = diagnostics[1].message
+  local query = vim.fn.shellescape(message)
+  local url = "https://www.google.com/search?q=" .. query
+
+  if vim.fn.has('mac') == 1 then
+    vim.fn.system({ 'open', url })
+  elseif vim.fn.has('unix') == 1 then
+    vim.fn.system({ 'xdg-open', url })
+  else
+    vim.notify("Unsupported platform for opening browser", vim.log.levels.ERROR)
+  end
+end, { desc = "[P]roblems [G]oogle diagnostic" })
 
 -- Exit terminal mode in the builtin terminal with a shortcut that is a bit easier
 -- for people to discover. Otherwise, you normally need to press <C-\><C-n>, which
@@ -470,7 +490,8 @@ require('lazy').setup({
       vim.keymap.set('n', '<leader>sd', builtin.diagnostics, { desc = '[S]earch [D]iagnostics' })
       vim.keymap.set('n', '<leader>sr', builtin.resume, { desc = '[S]earch [R]esume' })
       vim.keymap.set('n', '<leader>s.', builtin.oldfiles, { desc = '[S]earch Recent Files ("." for repeat)' })
-      vim.keymap.set('n', '<leader><leader>', builtin.buffers, { desc = '[ ] Find existing buffers' })
+      vim.keymap.set('n', '<leader><leader>', builtin.live_grep, { desc = '[ ] Fuzzy search working dir' })
+      vim.keymap.set('n', '<leader>,', builtin.buffers, { desc = '[ ] Find existing buffers' })
 
       -- Slightly advanced example of overriding default behavior and theme
       vim.keymap.set('n', '<leader>/', function()
@@ -607,7 +628,28 @@ require('lazy').setup({
           --  the definition of its *type*, not where it was *defined*.
           map('grt', require('telescope.builtin').lsp_type_definitions, '[G]oto [T]ype Definition')
 
-          map('zo', vim.diagnostic.open_float, '[Z]ero [O]pen diagnostic for current line')
+          map('po', vim.diagnostic.open_float, '[P]roblems [O]pen diagnostic for current line')
+
+          map('pg', function()
+            local line = vim.api.nvim_win_get_cursor(0)[1]
+            local diagnostics = vim.diagnostic.get(0, { lnum = line - 1 })
+            if vim.tbl_isempty(diagnostics) then
+              vim.notify(("No diagnostics on line %s"):format(line), vim.log.levels.ERROR)
+              return
+            end
+
+            local message = diagnostics[1].message
+            local query = vim.fn.shellescape(message)
+            local url = "https://www.google.com/search?q=" .. query
+
+            if vim.fn.has('mac') == 1 then
+              vim.fn.system({ 'open', url })
+            elseif vim.fn.has('unix') == 1 then
+              vim.fn.system({ 'xdg-open', url })
+            else
+              vim.notify("Unsupported platform for opening browser", vim.log.levels.ERROR)
+            end
+          end, '[P]roblems [G]oogle diagnostic')
 
           -- map('K', vim.lsp.buf.hover, 'Hover Documentation')
           -- This function resolves a difference between neovim nightly (version 0.11) and stable (version 0.10)
